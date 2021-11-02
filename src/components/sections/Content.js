@@ -10,6 +10,7 @@ import Select from "@material-ui/core/Select";
 import Chart from "./Chart";
 import FormHelperText from "@material-ui/core/FormHelperText";
 import TextField from "@material-ui/core/TextField";
+import Button from "@material-ui/core/Button";
 
 const styles = (theme) => ({
     paper: {
@@ -67,6 +68,9 @@ const keys = [
     "Hav",
     "Tav",
 ];
+//Necessary for tf to work
+const tf = require('@tensorflow/tfjs');
+
 
 function Content(props) {
     const [data, setData] = useState({});
@@ -80,7 +84,35 @@ function Content(props) {
     const chartTypeChange = (e) => {
         setChartType(e.target.value);
     };
- 
+
+
+    async function predict() {
+        // Predicts the uploaded test file
+
+        // Get the values of the uploaded File
+        var data_tensor_str = tf.tensor(data.map(function(e) {
+                    return Object.values(e);
+                     }))
+
+        //Cast to float
+        var data_tensor_float = tf.zeros(data_tensor_str.shape);
+        for (let i = 0; i < data_tensor_str.length; i++) {
+            data_tensor_str[i].map(function(index) {
+                data_tensor_float[i, index] = parseFloat(data_tensor_str[i, index]);
+              });
+            }
+
+        // drop the epoch
+        const data_sliced = data_tensor_float.slice([0, 3], [-1, 8]); //[start, start], [range, range]
+
+        //Load TFJS Model
+        const model = await tf.loadLayersModel('/MLPmodel_js/model.json');
+
+        //Predict testfile
+        const y_had = model.predict(data_sliced)
+        //console.log(y_had.shape)
+        document.getElementById("pred_out").innerHTML = y_had
+      }
 
     const yAxisLabelChange = (e) => {
         setYAxisLabel(e.target.value);
@@ -132,6 +164,8 @@ function Content(props) {
         }
     }, [average, variance, data, yAxisLabel]);
 
+
+
     return (
         <Grid
             container
@@ -153,9 +187,20 @@ function Content(props) {
                     onDataUploaded={handleData}
                     onError={handleError}
                     render={(onChange) => (
-                        <input type="file" onChange={onChange} />
+                        <input type="file" onChange={onChange} id="pred_file"/>
                     )}
                 />
+                <Button
+                    variant="outlined"
+                    style={{color: "#2a3eb1", margin: 5}} //2a3eb1
+                    onClick={predict}
+                >
+                    Predict
+                </Button>
+                <span id="pred_out"></span>
+                
+
+
             </Grid>
             <br />
             <Typography
